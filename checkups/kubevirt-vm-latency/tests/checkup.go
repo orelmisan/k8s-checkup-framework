@@ -3,12 +3,14 @@ package tests
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	v1 "kubevirt.io/api/core/v1"
 	"kubevirt.io/client-go/kubecli"
 
 	expect "github.com/google/goexpect"
+	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/pkg/config"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/pkg/ping"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/console"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/nads"
@@ -50,6 +52,35 @@ type Result struct {
 	Duration string          `json:"duration,omitempty"`
 	Error    error           `json:"failureReason"`
 	Latency  ping.PingResult `json:"latency"`
+}
+
+const namespaceFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+
+func CreateLatencyCheckOptions(params map[string]string) (Options, error) {
+	const errMsgPrefix = "failed to create latency check options"
+
+	sampleDuration, err := time.ParseDuration(params[config.SampleDurationEnvVarName])
+	if err != nil {
+		return Options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
+	}
+
+	workingNamespace, err := os.ReadFile(namespaceFile)
+	if err != nil {
+		return Options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
+	}
+
+	options := Options{
+		WorkingNamespace:         string(workingNamespace),
+		ResultConfigMapNamespace: params[config.ResultsConfigMapNamespaceEnvVarName],
+		ResultConfigMapName:      params[config.ResultsConfigMapNameEnvVarName],
+		NetworkNamespace:         params[config.NetworkNamespaceEnvVarName],
+		NetworkName:              params[config.NetworkNameEnvVarName],
+		SourceNode:               params[config.SourceNodeNameEnvVarName],
+		TargetNode:               params[config.TargetNodeNameEnvVarName],
+		Duration:                 sampleDuration,
+	}
+
+	return options, nil
 }
 
 func StartNetworkLatencyCheck(options Options) Result {
