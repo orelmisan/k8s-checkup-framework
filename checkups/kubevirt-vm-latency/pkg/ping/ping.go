@@ -1,10 +1,11 @@
 package ping
 
 import (
+	"fmt"
 	"log"
 	"regexp"
-	"strconv"
 	"strings"
+	"time"
 
 	expect "github.com/google/goexpect"
 
@@ -30,39 +31,39 @@ func ComposePingCommand(ipAddr string, args ...string) string {
 	return strings.Join(args, " ")
 }
 
-type PingLatencyResult struct {
-	Min     float64 `json:"min,omitempty"`
-	Max     float64 `json:"max,omitempty"`
-	Average float64 `json:"average,omitempty"`
-	Jitter  float64 `json:"jitter,omitempty"`
+type PingResult struct {
+	Min     time.Duration `json:"min,omitempty"`
+	Max     time.Duration `json:"max,omitempty"`
+	Average time.Duration `json:"average,omitempty"`
+	Jitter  time.Duration `json:"jitter,omitempty"`
 }
 
-func ParsePingLatencyResult(pingResult []expect.BatchRes) PingLatencyResult {
-	var result PingLatencyResult
+func ParsePingLatencyResult(pingResult []expect.BatchRes) PingResult {
+	var result PingResult
 	latencyPattern := regexp.MustCompile(`(round-trip|rtt)\s+\S+\s*=\s*([0-9.]+)/([0-9.]+)/([0-9.]+)/([0-9.]+)\s*ms`)
 
 	for _, response := range pingResult {
 		matches := latencyPattern.FindAllStringSubmatch(response.Output, -1)
 		for _, item := range matches {
-			min, err := strconv.ParseFloat(strings.TrimSpace(item[2]), 64)
+			min, err := time.ParseDuration(fmt.Sprintf("%sms", strings.TrimSpace(item[2])))
 			if err != nil {
 				log.Printf("failed to parse min latency from result: %v", err)
 			}
 			result.Min = min
 
-			avg, _ := strconv.ParseFloat(strings.TrimSpace(item[3]), 64)
+			average, err := time.ParseDuration(fmt.Sprintf("%sms", strings.TrimSpace(item[3])))
 			if err != nil {
 				log.Printf("failed to parse average jitter from result: %v", err)
 			}
-			result.Average = avg
+			result.Average = average
 
-			max, err := strconv.ParseFloat(strings.TrimSpace(item[4]), 64)
+			max, err := time.ParseDuration(fmt.Sprintf("%sms", strings.TrimSpace(item[4])))
 			if err != nil {
 				log.Printf("failed to parse max latency from result: %v", err)
 			}
 			result.Max = max
 
-			jitter, _ := strconv.ParseFloat(strings.TrimSpace(item[5]), 64)
+			jitter, _ := time.ParseDuration(fmt.Sprintf("%sms", strings.TrimSpace(item[5])))
 			if err != nil {
 				log.Printf("failed to parse jitter from result: %v", err)
 			}

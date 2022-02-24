@@ -9,9 +9,9 @@ import (
 	"kubevirt.io/client-go/kubecli"
 
 	expect "github.com/google/goexpect"
+	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/pkg/ping"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/console"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/nads"
-	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/ping"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/preflight"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/vmis"
 )
@@ -46,10 +46,10 @@ type Options struct {
 }
 
 type Result struct {
-	Options  Options                `json:",inline"`
-	Duration string                 `json:"duration,omitempty"`
-	Error    error                  `json:"error,omitempty"`
-	Latency  ping.PingLatencyResult `json:"latency"`
+	Options  Options         `json:",inline"`
+	Duration string          `json:"duration,omitempty"`
+	Error    error           `json:"failureReason"`
+	Latency  ping.PingResult `json:"latency"`
 }
 
 func StartNetworkLatencyCheck(options Options) Result {
