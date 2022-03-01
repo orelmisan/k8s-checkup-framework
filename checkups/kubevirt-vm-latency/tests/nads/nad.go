@@ -36,7 +36,7 @@ func GetNetworkType(virtClient kubecli.KubevirtClient, namespace, name string) (
 		for _, pluginRaw := range plugins {
 			plugin := pluginRaw.(map[string]interface{})
 			pluginType := fmt.Sprintf("%v", plugin[NetworkConfigTypeFiledName])
-			if supportedPlugin(pluginType) {
+			if isSupportedCNIPlugin(pluginType) {
 				networkType = pluginType
 				break
 			}
@@ -49,10 +49,10 @@ func GetNetworkType(virtClient kubecli.KubevirtClient, namespace, name string) (
 	return networkType, nil
 }
 
-var supportedPlugins = []string{"bridge", "bridge-cnv", "sriov"}
+var supportedCNIPlugins = []string{"bridge", "bridge-cnv", "sriov"}
 
-func supportedPlugin(name string) bool {
-	for _, supportedPlugin := range supportedPlugins {
+func isSupportedCNIPlugin(name string) bool {
+	for _, supportedPlugin := range supportedCNIPlugins {
 		if supportedPlugin == name {
 			return true
 		}
