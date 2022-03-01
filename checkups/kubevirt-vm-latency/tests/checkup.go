@@ -32,65 +32,64 @@ const (
 	targetCIDR = "192.168.0.200/24"
 )
 
-type Options struct {
-	ResultConfigMapNamespace string        `json:"-"`
-	ResultConfigMapName      string        `json:"-"`
-	WorkingNamespace         string        `json:"workingNamespace"`
-	NetworkNamespace         string        `json:"networkNamespace"`
-	NetworkName              string        `json:"networkName"`
-	SourceNode               string        `json:"sourceNode"`
-	TargetNode               string        `json:"targetNode"`
-	Duration                 time.Duration `json:"-"`
-	SourceMacAddr            string        `json:"-"`
-	TargetMacAddr            string        `json:"-"`
-	SourceCIDR               string        `json:"-"`
-	TargetCIDR               string        `json:"-"`
-	DesiredMaxLatency        time.Duration `json:"desiredMaxLatency"`
+type options struct {
+	ResultConfigMapNamespace string
+	ResultConfigMapName      string
+	workingNamespace         string
+	networkNamespace         string
+	networkName              string
+	sourceNode               string
+	targetNode               string
+	sampleDuration           time.Duration
+	desiredMaxLatency        time.Duration
+	sourceMacAddr            string
+	targetMacAddr            string
+	sourceCIDR               string
+	targetCIDR               string
 }
 
 type Result struct {
-	Options  Options         `json:",inline"`
-	Duration string          `json:"duration,omitempty"`
-	Error    error           `json:"failureReason"`
-	Latency  ping.PingResult `json:"latency"`
+	Error   error
+	options options
+	latency ping.PingResult
 }
 
 const namespaceFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 
-func CreateLatencyCheckOptions(params map[string]string) (Options, error) {
+func CreateLatencyCheckOptions(params map[string]string) (options, error) {
 	const errMsgPrefix = "failed to create latency check options"
 
 	sampleDuration, err := time.ParseDuration(params[config.SampleDurationEnvVarName])
 	if err != nil {
-		return Options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
+		return options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
 	}
 
 	maxLatency, err := time.ParseDuration(params[config.DesiredMaxLatencyEnvVarName])
 	if err != nil {
-		return Options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
+		return options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
 	}
 
 	workingNamespace, err := os.ReadFile(namespaceFile)
 	if err != nil {
-		return Options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
+		return options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
 	}
 
-	options := Options{
-		WorkingNamespace:         string(workingNamespace),
+	options := options{
+		workingNamespace:         string(workingNamespace),
 		ResultConfigMapNamespace: params[config.ResultsConfigMapNamespaceEnvVarName],
 		ResultConfigMapName:      params[config.ResultsConfigMapNameEnvVarName],
-		NetworkNamespace:         params[config.NetworkNamespaceEnvVarName],
-		NetworkName:              params[config.NetworkNameEnvVarName],
-		SourceNode:               params[config.SourceNodeNameEnvVarName],
-		TargetNode:               params[config.TargetNodeNameEnvVarName],
-		Duration:                 sampleDuration,
-		DesiredMaxLatency:        maxLatency,
+		networkNamespace:         params[config.NetworkNamespaceEnvVarName],
+		networkName:              params[config.NetworkNameEnvVarName],
+		sourceNode:               params[config.SourceNodeNameEnvVarName],
+		targetNode:               params[config.TargetNodeNameEnvVarName],
+		sampleDuration:           sampleDuration,
+		desiredMaxLatency:        maxLatency,
 	}
 
 	return options, nil
 }
 
-func StartNetworkLatencyCheck(virtClient kubecli.KubevirtClient, options Options) Result {
+func StartNetworkLatencyCheck(virtClient kubecli.KubevirtClient, options options) Result {
 	result := Result{}
 
 	if err := runNetworkLatencyPreflightChecks(virtClient, options); err != nil {
@@ -98,28 +97,27 @@ func StartNetworkLatencyCheck(virtClient kubecli.KubevirtClient, options Options
 		return result
 	}
 
-	options.SourceMacAddr = sourceMAC
-	options.SourceCIDR = sourceCIDR
-	options.TargetMacAddr = targetMAC
-	options.TargetCIDR = targetCIDR
+	options.sourceMacAddr = sourceMAC
+	options.sourceCIDR = sourceCIDR
+	options.targetMacAddr = targetMAC
+	options.targetCIDR = targetCIDR
 	sourceVMI, targetVMI, err := startNetworkLatencyCheckVMIs(virtClient, options)
 	if err != nil {
 		result.Error = err
 		return result
 	}
 
-	result, err = runNetworkLatencyCheck(virtClient, options.NetworkName, sourceVMI, targetVMI, options.Duration)
+	result, err = runNetworkLatencyCheck(virtClient, options.networkName, sourceVMI, targetVMI, options.sampleDuration)
 	if err != nil {
 		result.Error = err
 		return result
 	}
 
-	if result.Latency.Max > options.DesiredMaxLatency {
-		result.Error = fmt.Errorf("max latency is greater than expected: expected: (%v) result: (%v)", options.DesiredMaxLatency, result.Latency.Max)
+	if result.latency.Max > options.desiredMaxLatency {
+		result.Error = fmt.Errorf("max latency is greater than expected: expected: (%v) result: (%v)", options.desiredMaxLatency, result.latency.Max)
 	}
 
-	result.Duration = options.Duration.String()
-	result.Options = options
+	result.options = options
 
 	if err := vmis.DeleteAndWaitVmisDispose(virtClient, sourceVMI, targetVMI); err != nil {
 		result.Error = err
@@ -129,7 +127,7 @@ func StartNetworkLatencyCheck(virtClient kubecli.KubevirtClient, options Options
 	return result
 }
 
-func runNetworkLatencyPreflightChecks(virtClient kubecli.KubevirtClient, options Options) error {
+func runNetworkLatencyPreflightChecks(virtClient kubecli.KubevirtClient, options options) error {
 	const errMsgPrefix = "not all preflight checks passed"
 
 	log.Println("Starting preflights checks..")
@@ -142,7 +140,7 @@ func runNetworkLatencyPreflightChecks(virtClient kubecli.KubevirtClient, options
 		return fmt.Errorf("%s: %v", errMsgPrefix, err)
 	}
 
-	if err := preflight.VerifyNetworkAttachmentDefinitionExists(virtClient, options.NetworkNamespace, options.NetworkName); err != nil {
+	if err := preflight.VerifyNetworkAttachmentDefinitionExists(virtClient, options.networkNamespace, options.networkName); err != nil {
 		return fmt.Errorf("%s: %v", errMsgPrefix, err)
 	}
 
@@ -163,19 +161,19 @@ func runNetworkLatencyCheck(virtClient kubecli.KubevirtClient, netwrorkName stri
 	if err != nil {
 		return result, fmt.Errorf("%s: %v", errMsgPrefix, err)
 	}
-	result.Latency = ping.ParsePingLatencyResult(responses)
+	result.latency = ping.ParsePingLatencyResult(responses)
 
 	return result, nil
 }
 
 type createLatencyCheckVmiFn func(namespace, networkNamespace, networkName, mac, cidr, node string) *v1.VirtualMachineInstance
 
-func startNetworkLatencyCheckVMIs(virtClient kubecli.KubevirtClient, options Options) (*v1.VirtualMachineInstance, *v1.VirtualMachineInstance, error) {
+func startNetworkLatencyCheckVMIs(virtClient kubecli.KubevirtClient, options options) (*v1.VirtualMachineInstance, *v1.VirtualMachineInstance, error) {
 	const errMsgPrefix = "failed to setup netwrok latency check"
 
 	var fn createLatencyCheckVmiFn
 
-	networkType, err := nads.GetNetworkType(virtClient, options.NetworkNamespace, options.NetworkName)
+	networkType, err := nads.GetNetworkType(virtClient, options.networkNamespace, options.networkName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %v", errMsgPrefix, err)
 	}
@@ -186,8 +184,8 @@ func startNetworkLatencyCheckVMIs(virtClient kubecli.KubevirtClient, options Opt
 	case networkTypeSRIOV:
 		fn = vmis.NewLatencyCheckVmiWithSriovIface
 	}
-	sourceVMI := fn(options.WorkingNamespace, options.NetworkNamespace, options.NetworkName, options.SourceMacAddr, options.SourceCIDR, options.SourceNode)
-	targetVMI := fn(options.WorkingNamespace, options.NetworkNamespace, options.NetworkName, options.TargetMacAddr, options.TargetCIDR, options.TargetNode)
+	sourceVMI := fn(options.workingNamespace, options.networkNamespace, options.networkName, options.sourceMacAddr, options.sourceCIDR, options.sourceNode)
+	targetVMI := fn(options.workingNamespace, options.networkNamespace, options.networkName, options.targetMacAddr, options.targetCIDR, options.targetNode)
 
 	if err := vmis.StartAndWaitVmisReady(virtClient, sourceVMI, targetVMI); err != nil {
 		return nil, nil, err
@@ -226,12 +224,12 @@ const (
 
 func ResultToStringsMap(result Result) map[string]string {
 	resultMap := map[string]string{}
-	resultMap[composeSpecEnvKey(config.NetworkNamespaceEnvVarName)] = result.Options.NetworkNamespace
-	resultMap[composeSpecEnvKey(config.NetworkNameEnvVarName)] = result.Options.NetworkName
-	resultMap[composeSpecEnvKey(config.SourceNodeNameEnvVarName)] = result.Options.SourceNode
-	resultMap[composeSpecEnvKey(config.TargetNodeNameEnvVarName)] = result.Options.TargetNode
-	resultMap[composeSpecEnvKey(config.SampleDurationEnvVarName)] = result.Options.Duration.String()
-	resultMap[composeSpecEnvKey(config.DesiredMaxLatencyEnvVarName)] = result.Options.DesiredMaxLatency.String()
+	resultMap[composeSpecEnvKey(config.NetworkNamespaceEnvVarName)] = result.options.networkNamespace
+	resultMap[composeSpecEnvKey(config.NetworkNameEnvVarName)] = result.options.networkName
+	resultMap[composeSpecEnvKey(config.SourceNodeNameEnvVarName)] = result.options.sourceNode
+	resultMap[composeSpecEnvKey(config.TargetNodeNameEnvVarName)] = result.options.targetNode
+	resultMap[composeSpecEnvKey(config.SampleDurationEnvVarName)] = result.options.sampleDuration.String()
+	resultMap[composeSpecEnvKey(config.DesiredMaxLatencyEnvVarName)] = result.options.desiredMaxLatency.String()
 
 	var failureReason string
 	var succeeded bool
@@ -245,10 +243,10 @@ func ResultToStringsMap(result Result) map[string]string {
 
 	resultMap[succeededKey] = fmt.Sprintf("%v", succeeded)
 	resultMap[failureReasonKey] = failureReason
-	resultMap[minLatencyKey] = result.Latency.Min.String()
-	resultMap[maxLatencyKey] = result.Latency.Max.String()
-	resultMap[averageLatencyKey] = result.Latency.Average.String()
-	resultMap[jitterKey] = result.Latency.Jitter.String()
+	resultMap[minLatencyKey] = result.latency.Min.String()
+	resultMap[maxLatencyKey] = result.latency.Max.String()
+	resultMap[averageLatencyKey] = result.latency.Average.String()
+	resultMap[jitterKey] = result.latency.Jitter.String()
 
 	return resultMap
 }
