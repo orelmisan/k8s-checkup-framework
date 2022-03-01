@@ -83,14 +83,8 @@ func CreateLatencyCheckOptions(params map[string]string) (Options, error) {
 	return options, nil
 }
 
-func StartNetworkLatencyCheck(options Options) Result {
+func StartNetworkLatencyCheck(virtClient kubecli.KubevirtClient, options Options) Result {
 	result := Result{}
-
-	virtClient, err := kubecli.GetKubevirtClient()
-	if err != nil {
-		result.Error = fmt.Errorf("failed to obtain KubeVirt client: %v\n", err)
-		return result
-	}
 
 	if err := runNetworkLatencyPreflightChecks(virtClient, options); err != nil {
 		result.Error = err
@@ -207,4 +201,45 @@ func pingFromVMConsole(timeout time.Duration, vmi *v1.VirtualMachineInstance, ip
 			vmi.Namespace, vmi.Name, ipAddr, err)
 	}
 	return resp, nil
+}
+
+const (
+	succeededKey      = "status.succeeded"
+	failureReasonKey  = "status.failureReason"
+	minLatencyKey     = "status.result.minLatency"
+	maxLatencyKey     = "status.result.maxLatency"
+	averageLatencyKey = "status.result.averageLatency"
+	jitterKey         = "status.result.jitter"
+)
+
+func ResultToStringsMap(result Result) map[string]string {
+	resultMap := map[string]string{}
+	resultMap[composeSpecEnvKey(config.NetworkNamespaceEnvVarName)] = result.Options.NetworkNamespace
+	resultMap[composeSpecEnvKey(config.NetworkNameEnvVarName)] = result.Options.NetworkName
+	resultMap[composeSpecEnvKey(config.SourceNodeNameEnvVarName)] = result.Options.SourceNode
+	resultMap[composeSpecEnvKey(config.TargetNodeNameEnvVarName)] = result.Options.TargetNode
+	resultMap[composeSpecEnvKey(config.SampleDurationEnvVarName)] = result.Options.Duration.String()
+
+	var failureReason string
+	var succeeded bool
+	if result.Error != nil {
+		failureReason = result.Error.Error()
+		succeeded = false
+	} else {
+		failureReason = ""
+		succeeded = true
+	}
+
+	resultMap[succeededKey] = fmt.Sprintf("%v", succeeded)
+	resultMap[failureReasonKey] = failureReason
+	resultMap[minLatencyKey] = result.Latency.Min.String()
+	resultMap[maxLatencyKey] = result.Latency.Max.String()
+	resultMap[averageLatencyKey] = result.Latency.Average.String()
+	resultMap[jitterKey] = result.Latency.Jitter.String()
+
+	return resultMap
+}
+
+func composeSpecEnvKey(envVarName string) string {
+	return fmt.Sprintf("spec.env.%s", envVarName)
 }
