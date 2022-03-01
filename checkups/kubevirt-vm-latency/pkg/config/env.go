@@ -13,6 +13,7 @@ const (
 	SampleDurationEnvVarName            = "SAMPLE_DURATION"
 	SourceNodeNameEnvVarName            = "SOURCE_NODE"
 	TargetNodeNameEnvVarName            = "TARGET_NODE"
+	DesiredMaxLatencyEnvVarName         = "MAX_DESIRED_LATENCY"
 )
 
 func LoadEnvVars() (map[string]string, error) {
@@ -28,6 +29,7 @@ func LoadEnvVars() (map[string]string, error) {
 		SampleDurationEnvVarName,
 		SourceNodeNameEnvVarName,
 		TargetNodeNameEnvVarName,
+		DesiredMaxLatencyEnvVarName,
 	}
 
 	envVars := make(map[string]string, len(envVarNames))

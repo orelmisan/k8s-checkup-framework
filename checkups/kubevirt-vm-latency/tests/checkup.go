@@ -45,6 +45,7 @@ type Options struct {
 	TargetMacAddr            string        `json:"-"`
 	SourceCIDR               string        `json:"-"`
 	TargetCIDR               string        `json:"-"`
+	DesiredMaxLatency        time.Duration `json:"desiredMaxLatency"`
 }
 
 type Result struct {
@@ -64,6 +65,11 @@ func CreateLatencyCheckOptions(params map[string]string) (Options, error) {
 		return Options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
 	}
 
+	maxLatency, err := time.ParseDuration(params[config.DesiredMaxLatencyEnvVarName])
+	if err != nil {
+		return Options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
+	}
+
 	workingNamespace, err := os.ReadFile(namespaceFile)
 	if err != nil {
 		return Options{}, fmt.Errorf("%s: %v", errMsgPrefix, err)
@@ -78,6 +84,7 @@ func CreateLatencyCheckOptions(params map[string]string) (Options, error) {
 		SourceNode:               params[config.SourceNodeNameEnvVarName],
 		TargetNode:               params[config.TargetNodeNameEnvVarName],
 		Duration:                 sampleDuration,
+		DesiredMaxLatency:        maxLatency,
 	}
 
 	return options, nil
@@ -106,6 +113,11 @@ func StartNetworkLatencyCheck(virtClient kubecli.KubevirtClient, options Options
 		result.Error = err
 		return result
 	}
+
+	if result.Latency.Max > options.DesiredMaxLatency {
+		result.Error = fmt.Errorf("max latency is greater than expected: expected: (%v) result: (%v)", options.DesiredMaxLatency, result.Latency.Max)
+	}
+
 	result.Duration = options.Duration.String()
 	result.Options = options
 
@@ -219,6 +231,7 @@ func ResultToStringsMap(result Result) map[string]string {
 	resultMap[composeSpecEnvKey(config.SourceNodeNameEnvVarName)] = result.Options.SourceNode
 	resultMap[composeSpecEnvKey(config.TargetNodeNameEnvVarName)] = result.Options.TargetNode
 	resultMap[composeSpecEnvKey(config.SampleDurationEnvVarName)] = result.Options.Duration.String()
+	resultMap[composeSpecEnvKey(config.DesiredMaxLatencyEnvVarName)] = result.Options.DesiredMaxLatency.String()
 
 	var failureReason string
 	var succeeded bool
