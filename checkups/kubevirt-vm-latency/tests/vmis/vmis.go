@@ -173,7 +173,7 @@ func StartAndWaitVmisReady(virtClient kubecli.KubevirtClient, vmis ...*v1.Virtua
 }
 
 func startVmi(virtClient kubecli.KubevirtClient, vmi *v1.VirtualMachineInstance) error {
-	log.Printf("starting VMI %s/%s ..", vmi.Namespace, vmi.Name)
+	log.Printf("starting VMI %s/%s..", vmi.Namespace, vmi.Name)
 	if _, err := virtClient.VirtualMachineInstance(vmi.Namespace).Create(vmi); err != nil {
 		return fmt.Errorf("failed to start VMI %s/%s: %v", vmi.Namespace, vmi.Name, err)
 	}
