@@ -10,10 +10,10 @@ import (
 
 	expect "github.com/google/goexpect"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/console"
+	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/nads"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/ping"
 	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/preflight"
-	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/utils/nads"
-	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/utils/vmis"
+	"github.com/orelmisan/k8s-checkup-framework/checkups/kubevirt-vm-latency/tests/vmis"
 )
 
 const (
