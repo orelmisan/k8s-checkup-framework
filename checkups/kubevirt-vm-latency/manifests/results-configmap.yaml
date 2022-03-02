@@ -2,4 +2,4 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kubevirt-latency-check-result
-  namespace: default
+  namespace: kubevirt-latency-check

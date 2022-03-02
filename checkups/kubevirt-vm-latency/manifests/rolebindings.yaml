@@ -44,7 +44,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: result-configmap-writer-to-sa
-  namespace: default
+  namespace: kubevirt-latency-check
 subjects:
 - kind: ServiceAccount
   name: kubevirt-latency-checker

@@ -21,21 +21,11 @@ trap "kubectl delete -f $MANIFESTS" EXIT
 ## Create kubevirt network latency checkup prequisits
 kubectl apply -f $MANIFESTS/nads.yaml
 
-# Create the Roles that are necessary for the checkup to work.
-# The ServiceAccount that runs the checkup pod will be granted with those Roles.
-kubectl apply -f $MANIFESTS/roles.yaml
-
-echo "starting Kubevirt network latency checkup"
-cat $MANIFESTS/latency-check-config.yaml
-echo ""
-sleep 2
-
 kubectl apply -f $MANIFESTS/namespace.yaml
 kubectl apply -f $MANIFESTS/serviceaccount.yaml
+kubectl apply -f $MANIFESTS/roles.yaml
 kubectl apply -f $MANIFESTS/rolebindings.yaml
 kubectl apply -f $MANIFESTS/results-configmap.yaml
-
-kubectl apply -f $MANIFESTS/latency-check-config.yaml
 kubectl apply -f $MANIFESTS/latency-check-job.yaml
 
 # follow the checkup logs..
