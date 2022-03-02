@@ -5,12 +5,12 @@ set -ex
 SCRIPT_PATH=$(dirname "$(realpath "$0")")
 PROJECT_PATH="$(realpath ${SCRIPT_PATH}/..)"
 
-CRI="${CRI:-docker}"
-REGISTRY="${REGISTRY:-localhost:5000}"
+CRI="${CRI:-podman}"
+
 IMAGE="${IMAGE:-kubevirt-latency-check}"
 
 TEMPLATE="$SCRIPT_PATH/Dockerfile.in"
-BASE_IMAGE="registry.access.redhat.com/ubi8/ubi"
+BASE_IMAGE="alpine:3.14"
 BIN="latencycheck"
 
 build_dir=$(mktemp -d "/tmp/build.XXXX")
@@ -29,8 +29,3 @@ pushd "$build_dir"
     # build
     $CRI build . -t "$IMAGE"
 popd
-
-# push
-$CRI tag "$IMAGE" "$REGISTRY/$IMAGE"
-$CRI push "$REGISTRY/$IMAGE"
-

@@ -5,10 +5,16 @@ set -e
 SCRIPT_PATH=$(dirname "$(realpath "$0")")
 MANIFESTS="$SCRIPT_PATH/manifests"
 
+CRI="${CRI:-podman}"
+
 # build container and push to local registry
 image="kubevirt-latency-check"
+CRI="$CRI" IMAGE="$image" TAG="$tag" $SCRIPT_PATH/build/build.sh
+
+# push to local registry
 registry="localhost:5000"
-IMAGE="$image" REGISTRY="$registry" $SCRIPT_PATH/build/build.sh
+$CRI tag "$image" "$registry/$image"
+$CRI push "$registry/$image"
 
 trap "kubectl delete -f $MANIFESTS" EXIT
 
