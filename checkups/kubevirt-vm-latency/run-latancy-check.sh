@@ -9,7 +9,7 @@ CRI="${CRI:-podman}"
 
 # build container and push to local registry
 image="kubevirt-latency-check"
-CRI="$CRI" IMAGE="$image" TAG="$tag" $SCRIPT_PATH/build/build.sh
+CRI="$CRI" IMAGE="$image" $SCRIPT_PATH/build/build.sh
 
 # push to local registry
 registry="localhost:5000"

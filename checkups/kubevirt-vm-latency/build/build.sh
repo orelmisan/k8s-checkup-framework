@@ -10,7 +10,6 @@ CRI="${CRI:-podman}"
 IMAGE="${IMAGE:-kubevirt-latency-check}"
 
 TEMPLATE="$SCRIPT_PATH/Dockerfile.in"
-BASE_IMAGE="alpine:3.14"
 BIN="latencycheck"
 
 build_dir=$(mktemp -d "/tmp/build.XXXX")
