@@ -8,8 +8,8 @@ import (
 const (
 	ResultsConfigMapNamespaceEnvVarName = "RESULT_CONFIGMAP_NAMESPACE"
 	ResultsConfigMapNameEnvVarName      = "RESULT_CONFIGMAP_NAME"
-	NetworkNamespaceEnvVarName          = "NETWORK_NAMESPACE"
-	NetworkNameEnvVarName               = "NETWORK_NAME"
+	NetworkNamespaceEnvVarName          = "NAD_NAMESPACE"
+	NetworkNameEnvVarName               = "NAD_NAME"
 	SampleDurationEnvVarName            = "SAMPLE_DURATION"
 	SourceNodeNameEnvVarName            = "SOURCE_NODE"
 	TargetNodeNameEnvVarName            = "TARGET_NODE"
