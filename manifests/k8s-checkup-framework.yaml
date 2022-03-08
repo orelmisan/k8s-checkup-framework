@@ -65,3 +65,20 @@ subjects:
 - kind: ServiceAccount
   name: checkup-framework-sa
   namespace: k8s-checkup-framework
+    Add framework e2e automation script
+    
+    Currently there is no automation for running
+    a checkup through the framework including building
+    the images of the framework and the checkup.
+    
+    In order to shorten iteration time and get quick
+    feedback whether this commit introduce hack/framework-e2e
+    which automate the following flow:
+    - checkup-framework build
+    - echo checkup build
+    - framework deployment
+    - running the echo checkup with the framework
+    - teardown
+
+    Also, echo checkup build-image script is changed
+    to enable running it from any directory.
