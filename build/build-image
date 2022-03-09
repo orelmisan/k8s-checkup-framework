@@ -34,21 +34,21 @@ TAG=${TAG:-latest}
 CRI="${CRI:-podman}"
 
 [ -d "${OUT_DIR}" ] && \
-  rm -vrf ${OUT_DIR}/*
+  rm -vrf "${OUT_DIR:?}"/*
 
 $CRI volume inspect ${CACHE_VOLUME_NAME} >> /dev/null || \
   $CRI volume create ${CACHE_VOLUME_NAME}
 
-mkdir -p ${OUT_DIR}
+mkdir -p "${OUT_DIR}"
 
 $CRI run -it --rm \
-  --volume ${CACHE_VOLUME_NAME}:${CONTAINER_GO_BUILD_CACHE_DIR} \
-  --volume ${OUT_DIR}:${CONTAINER_OUT_DIR} \
-  --volume ${PROJECT_PATH}:${CONTAINER_SRC_DIR}:ro,Z \
+  --volume "${CACHE_VOLUME_NAME}:${CONTAINER_GO_BUILD_CACHE_DIR}" \
+  --volume "${OUT_DIR}:${CONTAINER_OUT_DIR}" \
+  --volume "${PROJECT_PATH}:${CONTAINER_SRC_DIR}:ro,Z" \
   --workdir ${CONTAINER_SRC_DIR} \
   ${GO_ALPINE_IMAGE} \
   go build -v -o "${CONTAINER_OUT_DIR}/${BINARY_NAME}" ./cmd
 
-$CRI image build ${OUT_DIR} \
-  --file ${BUILD_DIR}/Dockerfile \
+$CRI image build "${OUT_DIR}" \
+  --file "${BUILD_DIR}/Dockerfile" \
   --tag "${IMAGE_NAME}:${TAG}" \
