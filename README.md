@@ -1,5 +1,7 @@
 # k8s-checkup-framework
 
+This was a proof of concept for https://github.com/kiagnose/kiagnose
+
 # Checkup's Launcher
 ## Build Instructions
 ```bash
